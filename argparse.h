@@ -1,18 +1,18 @@
 /**
- * @file argparser.hpp
+ * @file argparse.hpp
  * @brief Modern Argument Parser for C/C++.
  * @details All public API, types, macros, and configuration.
  * @author Sackey Ezekiel Etrue (djoezeke)
  * @version 0.1.0
- * @see https://www.github.com/djoezeke/argparser
+ * @see https://www.github.com/djoezeke/argparse
  * @copyright Copyright (c) 2025 Sackey Ezekiel Etrue
  *
  * Developed by Sackey Ezekiel Etrue and every direct or indirect contributors.
  * See LICENSE for copyright and licensing details (standard MIT License).
  *
- * ARGPARSER: What is `argparser` ?
+ * ARGPARSER: What is `argparse` ?
  *
- *      argparser is a modern C/C++ library for Commandline Argument Parsing.
+ *      argparse is a modern C/C++ library for Commandline Argument Parsing.
  *
  *      MISSION:
  *
@@ -58,18 +58,18 @@
  *
  * HELP:
  *    - See links below.
- *    - Read top of argparser.cpp for more details and comments.
+ *    - Read top of argparse.cpp for more details and comments.
  *
  *  Has only had a few tests run, may have issues.
  *
- *  If having issues compiling/linking/running raise an issue (https://github.com/djoezeke/argparser/issues).
- *  Please post in https://github.com/djoezeke/argparser/discussions if you cannot find a solution.
+ *  If having issues compiling/linking/running raise an issue (https://github.com/djoezeke/argparse/issues).
+ *  Please post in https://github.com/djoezeke/argparse/discussions if you cannot find a solution.
  *
  * RESOURCES:
  *
- * - Homepage ................... https://github.com/djoezeke/argparser
- * - Releases & changelog ....... https://github.com/djoezeke/argparser/releases
- * - Issues & support ........... https://github.com/djoezeke/argparser/issues
+ * - Homepage ................... https://github.com/djoezeke/argparse
+ * - Releases & changelog ....... https://github.com/djoezeke/argparse/releases
+ * - Issues & support ........... https://github.com/djoezeke/argparse/issues
  *
  * LICENSE: MIT License
  *      See end of file for license information.
@@ -172,36 +172,51 @@
 #include <initializer_list>
 #include <memory>
 #include <cstdio>
+#include <functional>
+#include <thread>
+#include <atomic>
+#include <sys/stat.h>
 
-//-----------------------------------------------------------------------------
-// [SECTION] Configurations
-//-----------------------------------------------------------------------------
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
-/**
- * @defgroup configuration Library Configurations.
- * @brief Preprocessor macros for configuring library functionality.
- * @{
- */
-
-/**
- * @brief Configure file with user config.
- */
-
- #ifdef ARGPARSER_CONFIG
-    #include ARGPARSER_CONFIG
-#endif // ARGPARSER_CONFIG
-
-/** @} */
-
-// clang-format on
-
-namespace argparser
+namespace argparse
 {
+    struct BuiltinValidators {
+        static bool is_file(const std::string &path) {
+            FILE *f = fopen(path.c_str(), "r");
+            if (f) {
+                fclose(f);
+                return true;
+            }
+            return false;
+        }
 
-}
+        static bool is_dir(const std::string &path) {
+#ifdef _WIN32
+            DWORD dwAttrib = GetFileAttributesA(path.c_str());
+            return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+#else
+            struct stat s;
+            return (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFDIR));
+#endif
+        }
 
-namespace argparser
-{
+        template<typename T>
+        static auto in_range(T min, T max) {
+            return [min, max](const std::string &value) {
+                try {
+                    T val = static_cast<T>(std::stod(value));
+                    return val >= min && val <= max;
+                } catch (...) {
+                    return false;
+                }
+            };
+        }
+    };
 
 #ifndef ARGPARSER_NO_EXCEPTIONS
 
@@ -264,6 +279,21 @@ namespace argparser
          * @param message Human-readable error description.
          */
         RequiredError(const std::string &message)
+            : ArgumentError(message) {};
+    };
+
+    /**
+     * @class RequiredIfError
+     * @brief Exception thrown when an argument is missing but required by another argument.
+     */
+    class RequiredIfError : public ArgumentError
+    {
+    public:
+        /**
+         * @brief Constructs a required-if error with a message.
+         * @param message Human-readable error description.
+         */
+        RequiredIfError(const std::string &message)
             : ArgumentError(message) {};
     };
 
@@ -363,6 +393,13 @@ namespace argparser
             Color examples_color = Color::Green;      ///< Color for examples.
             Color metavar_color = Color::Yellow;      ///< Color for metavariables.
             Color description_color = Color::Default; ///< Color for descriptions.
+
+            /** @brief Returns a predefined "Nord" theme. */
+            static ColorTheme nord();
+            /** @brief Returns a predefined "Monokai" theme. */
+            static ColorTheme monokai();
+            /** @brief Returns a predefined "Dracula" theme. */
+            static ColorTheme dracula();
         };
 
         /**
@@ -496,6 +533,22 @@ namespace argparser
             std::vector<Item> m_Items;        ///< Item rows.
             std::vector<std::string> m_Texts; ///< Free-form text blocks.
             std::vector<Example> m_Examples;  ///< Example rows.
+        };
+
+        /**
+         * @class Table
+         * @brief Utility for rendering structured tabular data.
+         */
+        class Table
+        {
+        public:
+            /** @brief Adds a row to the table. */
+            void add_row(std::vector<std::string> columns);
+            /** @brief Formats the table as a string. */
+            std::string format(const Alignment &align) const;
+
+        private:
+            std::vector<std::vector<std::string>> m_Rows;
         };
 
     public:
@@ -657,6 +710,8 @@ namespace argparser
         std::string wrap_text(const std::string &text, size_t indent_level = 0) const;
         /** @brief Applies ANSI color formatting to text when enabled. */
         std::string colorize(const std::string &text, Color color) const;
+        /** @brief Wraps text in an ANSI hyperlink (OSC 8). */
+        std::string hyperlink(const std::string &text, const std::string &url) const;
 
     private:
         /** @brief Detects the terminal width when auto-sizing is requested. */
@@ -815,6 +870,10 @@ namespace argparser
             Argument &env(const std::string &name);
             /** @brief Restricts the argument to a set of allowed string values. */
             Argument &choices(std::initializer_list<std::string> values);
+            /** @brief Sets a custom validator for the argument. */
+            Argument &check(std::function<bool(const std::string &)> validator, const std::string &message = "");
+            /** @brief Marks the argument as required if another argument is present. */
+            Argument &depends_on(const std::string &name);
             /** @brief Returns the canonical destination name. */
             const std::string &dest() const;
 
@@ -843,14 +902,57 @@ namespace argparser
 
             bool m_Required{false}; ///< Whether the argument is required.
 
-            std::vector<std::string> m_DefaultValues;   ///< Default fallback values.
-            std::optional<std::string> m_ImplicitValue; ///< Implicit value when no explicit value is given.
-            std::optional<std::string> m_EnvVar;        ///< Environment variable fallback name.
-            std::vector<std::string> m_Choices;         ///< Allowed values list.
-            bool m_Hidden{false};                       ///< Hidden from help output.
+            std::vector<std::string> m_DefaultValues;                 ///< Default fallback values.
+            std::optional<std::string> m_ImplicitValue;               ///< Implicit value when no explicit value is given.
+            std::optional<std::string> m_EnvVar;                      ///< Environment variable fallback name.
+            std::vector<std::string> m_Choices;                       ///< Allowed values list.
+            std::function<bool(const std::string &)> m_Validator;     ///< Custom validation logic.
+            std::string m_ValidatorError;                             ///< Error message when validation fails.
+            std::optional<std::string> m_DependsOn;                   ///< Name of another argument this depends on.
+            bool m_Hidden{false};                                     ///< Hidden from help output.
 
             std::vector<std::string> m_Values; ///< Parsed values.
             std::size_t m_Occurrences{0};      ///< Number of times the argument appeared.
+        };
+
+        /**
+         * @class ArgumentGroup
+         * @brief Logical grouping of arguments for help output and validation.
+         */
+        class ArgumentGroup
+        {
+            friend class ArgumentParser;
+
+        public:
+            /** @brief Constructs an argument group. */
+            ArgumentGroup(const std::string &title = "", const std::string &description = "")
+                : m_Title(title), m_Description(description) {}
+
+            /** @brief Marks the group as mutually exclusive. */
+            ArgumentGroup &exclusive(bool value = true)
+            {
+                m_IsExclusive = value;
+                return *this;
+            }
+
+            /** @brief Marks the group as required (at least one argument must be present). */
+            ArgumentGroup &required(bool value = true)
+            {
+                m_IsRequired = value;
+                return *this;
+            }
+
+            /** @brief Adds an argument to the group. */
+            template <typename... Names>
+            Argument &add_argument(const Names &...names);
+
+        private:
+            std::string m_Title;
+            std::string m_Description;
+            std::vector<std::size_t> m_ArgumentIndices;
+            bool m_IsExclusive{false};
+            bool m_IsRequired{false};
+            ArgumentParser *m_Parser{nullptr};
         };
 
     public:
@@ -861,6 +963,13 @@ namespace argparser
          * @param epilog Footer text shown after help output.
          */
         ArgumentParser(std::string program = "", std::string description = "", std::string epilog = "");
+
+        /** @brief Adds a new argument group. */
+        ArgumentGroup &add_argument_group(const std::string &title, const std::string &description = "");
+
+        /** @brief Adds a mutually exclusive group. */
+        ArgumentGroup &add_mutually_exclusive_group(bool required = false);
+
         /** @brief Returns a mutable reference to the program name. */
         std::string &program();
         /** @brief Sets the program name. */
@@ -873,6 +982,8 @@ namespace argparser
         std::string &epilog();
         /** @brief Sets the epilog string. */
         ArgumentParser &epilog(std::string epilog);
+        /** @brief Enables or disables interactive fallback for missing required arguments. */
+        ArgumentParser &interactive(bool value = true);
         /** @brief Returns the internal help formatter. */
         HelpFormatter &formatter();
         /** @brief Replaces the internal help formatter. */
@@ -886,9 +997,10 @@ namespace argparser
 
         /**
          * @brief Format help message
+         * @param show_hidden Whether to include hidden arguments.
          * @return The complete help text
          */
-        std::string format_help() const;
+        std::string format_help(bool show_hidden = false) const;
 
         /**
          * @brief Format usage message
@@ -951,6 +1063,9 @@ namespace argparser
         /** @brief Writes the generated usage text to a stream. */
         void print_usage(std::ostream &stream = std::cout) const;
 
+        /** @brief Generates a shell completion script. */
+        std::string generate_completion_script(const std::string &shell) const;
+
     private:
         /** @brief Returns true for numeric tokens that should be treated as values. */
         static bool is_negative_number_token(const std::string &token);
@@ -964,6 +1079,10 @@ namespace argparser
         Argument &lookup_option(const std::string &name);
         /** @brief Finds a registered option or returns nullptr. */
         Argument *try_lookup_option(const std::string &name);
+        /** @brief Suggests a correction for a typo using Levenshtein distance. */
+        std::string suggest_correction(const std::string &name) const;
+        /** @brief Calculates the Levenshtein distance between two strings. */
+        static size_t levenshtein_distance(const std::string &s1, const std::string &s2);
         /** @brief Applies the configured action for a parsed argument. */
         void apply_action(Argument &arg, const std::vector<std::string> &values);
         std::vector<std::string> collect_option_values(Argument &arg,
@@ -994,10 +1113,12 @@ namespace argparser
         bool m_AddHelp{true}; ///< Whether the built-in help option is added.
 
         std::vector<Argument> m_Arguments;                                              ///< All registered arguments.
+        std::vector<ArgumentGroup> m_Groups;                                            ///< Argument groups.
         std::vector<std::size_t> m_Positionals;                                         ///< Indices of positional arguments.
         std::unordered_map<std::string, std::size_t> m_OptionLookup;                    ///< Lookup table for option aliases.
         std::unordered_map<std::string, std::unique_ptr<ArgumentParser>> m_Subcommands; ///< Registered subcommands.
         std::vector<std::string> m_UnknownArgs;                                         ///< Unknown tokens captured during parsing.
+        bool m_InteractiveFallback{false};                                              ///< Whether to prompt for missing required arguments.
 
         Namespace m_Namespace;         ///< Last parsed namespace.
         HelpFormatter m_HelpFormatter; ///< Formatter used for help and usage.
@@ -1016,17 +1137,96 @@ namespace argparser
     /** @brief Alias for HelpFormatter::ColorTheme. */
     using ColorTheme = HelpFormatter::ColorTheme;
 
-} // namespace argparser
+#include <thread>
+#include <atomic>
+#include <sys/stat.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
-#endif // DJOEZEKE_ARGPARSER_HPP
+// ... rest of the file ...
 
-#pragma region Argparser
+    //-----------------------------------------------------------------------------
+    // [Class] HelpFormatter::ColorTheme
+    //-----------------------------------------------------------------------------
 
-#define ARGPARSER_IMPLEMENTATION
-#ifdef ARGPARSER_IMPLEMENTATION
+    HelpFormatter::ColorTheme HelpFormatter::ColorTheme::nord()
+    {
+        ColorTheme theme;
+        theme.usage_color = Color::Cyan;
+        theme.option_color = Color::Blue;
+        theme.heading_color = Color::Bold;
+        theme.section_color = Color::Cyan;
+        theme.metavar_color = Color::Yellow;
+        return theme;
+    }
 
-namespace argparser
-{
+    HelpFormatter::ColorTheme HelpFormatter::ColorTheme::monokai()
+    {
+        ColorTheme theme;
+        theme.usage_color = Color::Magenta;
+        theme.option_color = Color::Green;
+        theme.heading_color = Color::Bold;
+        theme.section_color = Color::Magenta;
+        theme.metavar_color = Color::Yellow;
+        return theme;
+    }
+
+    HelpFormatter::ColorTheme HelpFormatter::ColorTheme::dracula()
+    {
+        ColorTheme theme;
+        theme.usage_color = Color::Magenta;
+        theme.option_color = Color::Cyan;
+        theme.heading_color = Color::Bold;
+        theme.section_color = Color::Magenta;
+        theme.metavar_color = Color::Yellow;
+        return theme;
+    }
+
+    //-----------------------------------------------------------------------------
+    // [Class] HelpFormatter::Table
+    //-----------------------------------------------------------------------------
+
+    void HelpFormatter::Table::add_row(std::vector<std::string> columns)
+    {
+        m_Rows.push_back(std::move(columns));
+    }
+
+    std::string HelpFormatter::Table::format(const Alignment &align) const
+    {
+        if (m_Rows.empty())
+            return "";
+
+        size_t num_cols = m_Rows[0].size();
+        std::vector<size_t> col_widths(num_cols, 0);
+
+        for (const auto &row : m_Rows)
+        {
+            for (size_t i = 0; i < row.size(); ++i)
+            {
+                col_widths[i] = std::max(col_widths[i], row[i].length());
+            }
+        }
+
+        std::ostringstream oss;
+        const std::string indent(align.indent_size, align.indent_char);
+
+        for (const auto &row : m_Rows)
+        {
+            oss << indent;
+            for (size_t i = 0; i < row.size(); ++i)
+            {
+                oss << row[i];
+                if (i < row.size() - 1)
+                {
+                    oss << std::string(col_widths[i] - row[i].length() + 2, ' ');
+                }
+            }
+            oss << "\n";
+        }
+
+        return oss.str();
+    }
 
     //-----------------------------------------------------------------------------
     // [Class] HelpFormatter
@@ -1252,6 +1452,16 @@ namespace argparser
         return format_colored(text, color);
     }
 
+    std::string HelpFormatter::hyperlink(const std::string &text, const std::string &url) const
+    {
+        if (m_Format == Format::Plain || !m_Theme.enabled)
+            return text;
+
+        std::ostringstream oss;
+        oss << "\033]8;;" << url << "\033\\" << text << "\033]8;;\033\\";
+        return oss.str();
+    }
+
     size_t HelpFormatter::get_terminal_width()
     {
 #ifdef _WIN32
@@ -1433,6 +1643,11 @@ namespace argparser
                 .action("help")
                 .default_value(false)
                 .help("show this help message and exit");
+
+            add_argument("--help-all")
+                .action("help")
+                .default_value(false)
+                .help("show all arguments, including hidden ones");
         }
     }
 
@@ -1496,11 +1711,26 @@ namespace argparser
         return *this;
     };
 
+    ArgumentParser::ArgumentGroup &ArgumentParser::add_argument_group(const std::string &title, const std::string &description)
+    {
+        m_Groups.emplace_back(title, description);
+        m_Groups.back().m_Parser = this;
+        return m_Groups.back();
+    }
+
+    ArgumentParser::ArgumentGroup &ArgumentParser::add_mutually_exclusive_group(bool required)
+    {
+        auto &group = add_argument_group("", "");
+        group.exclusive(true).required(required);
+        return group;
+    }
+
     /**
      * @brief Format help message
+     * @param show_hidden Whether to include hidden arguments.
      * @return The complete help text
      */
-    std::string ArgumentParser::format_help() const
+    std::string ArgumentParser::format_help(bool show_hidden) const
     {
         HelpFormatter fmt = m_HelpFormatter;
         fmt.program(m_Program)
@@ -1508,18 +1738,35 @@ namespace argparser
             .description(m_Description)
             .epilog(m_Epilog);
 
-        // Add optional arguments section
-        auto &opt_section = const_cast<HelpFormatter &>(fmt).add_section("optional arguments");
-        for (const auto &arg : m_Arguments)
+        // Keep track of arguments already added to a group
+        std::vector<bool> added(m_Arguments.size(), false);
+
+        // Add custom groups first
+        for (const auto &group : m_Groups)
         {
-            if (arg.m_Kind == Argument::Kind::Optional && !arg.m_Hidden)
+            if (group.m_ArgumentIndices.empty())
+                continue;
+
+            auto &section = const_cast<HelpFormatter &>(fmt).add_section(group.m_Title, group.m_Description);
+            for (auto idx : group.m_ArgumentIndices)
             {
+                const auto &arg = m_Arguments[idx];
+                if (arg.m_Hidden && !show_hidden)
+                    continue;
+
                 std::string opt_str;
-                for (size_t i = 0; i < arg.m_OptionNames.size(); ++i)
+                if (arg.m_Kind == Argument::Kind::Optional)
                 {
-                    if (i > 0)
-                        opt_str += ", ";
-                    opt_str += arg.m_OptionNames[i];
+                    for (size_t i = 0; i < arg.m_OptionNames.size(); ++i)
+                    {
+                        if (i > 0)
+                            opt_str += ", ";
+                        opt_str += arg.m_OptionNames[i];
+                    }
+                }
+                else
+                {
+                    opt_str = arg.m_Dest;
                 }
 
                 std::string metavar = arg.m_Metavar;
@@ -1531,27 +1778,70 @@ namespace argparser
                                    { return static_cast<char>(std::toupper(c)); });
                 }
 
-                opt_section.add_item(opt_str, metavar, arg.m_Help, arg.m_Required);
+                section.add_item(opt_str, metavar, arg.m_Help, arg.m_Required);
+                added[idx] = true;
             }
         }
 
-        // Add positional arguments section if any
-        bool has_positional = false;
-        for (const auto &arg : m_Arguments)
+        // Add remaining optional arguments section
+        bool has_remaining_optional = false;
+        for (size_t i = 0; i < m_Arguments.size(); ++i)
         {
-            if (arg.m_Kind == Argument::Kind::Positional && !arg.m_Hidden)
+            if (m_Arguments[i].m_Kind == Argument::Kind::Optional && (show_hidden || !m_Arguments[i].m_Hidden) && !added[i])
             {
-                has_positional = true;
+                has_remaining_optional = true;
                 break;
             }
         }
 
-        if (has_positional)
+        if (has_remaining_optional)
+        {
+            auto &opt_section = const_cast<HelpFormatter &>(fmt).add_section("optional arguments");
+            for (size_t i = 0; i < m_Arguments.size(); ++i)
+            {
+                const auto &arg = m_Arguments[i];
+                if (arg.m_Kind == Argument::Kind::Optional && (show_hidden || !arg.m_Hidden) && !added[i])
+                {
+                    std::string opt_str;
+                    for (size_t j = 0; j < arg.m_OptionNames.size(); ++j)
+                    {
+                        if (j > 0)
+                            opt_str += ", ";
+                        opt_str += arg.m_OptionNames[j];
+                    }
+
+                    std::string metavar = arg.m_Metavar;
+                    if (metavar.empty() && arg.takes_value())
+                    {
+                        metavar = arg.m_Dest;
+                        std::transform(metavar.begin(), metavar.end(), metavar.begin(),
+                                       [](unsigned char c)
+                                       { return static_cast<char>(std::toupper(c)); });
+                    }
+
+                    opt_section.add_item(opt_str, metavar, arg.m_Help, arg.m_Required);
+                }
+            }
+        }
+
+        // Add remaining positional arguments section if any
+        bool has_remaining_positional = false;
+        for (size_t i = 0; i < m_Arguments.size(); ++i)
+        {
+            if (m_Arguments[i].m_Kind == Argument::Kind::Positional && (show_hidden || !m_Arguments[i].m_Hidden) && !added[i])
+            {
+                has_remaining_positional = true;
+                break;
+            }
+        }
+
+        if (has_remaining_positional)
         {
             auto &pos_section = const_cast<HelpFormatter &>(fmt).add_section("positional arguments");
-            for (const auto &arg : m_Arguments)
+            for (size_t i = 0; i < m_Arguments.size(); ++i)
             {
-                if (arg.m_Kind == Argument::Kind::Positional && !arg.m_Hidden)
+                const auto &arg = m_Arguments[i];
+                if (arg.m_Kind == Argument::Kind::Positional && (show_hidden || !arg.m_Hidden) && !added[i])
                 {
                     pos_section.add_item(arg.m_Dest, "", arg.m_Help, arg.m_Required);
                 }
@@ -1569,7 +1859,6 @@ namespace argparser
             }
         }
 
-        // return fmt.format_help(const_cast<std::vector<Argument> *>(&m_Arguments));
         return fmt.format_help();
     }
 
@@ -1971,7 +2260,13 @@ namespace argparser
         if (arg == nullptr)
         {
 #ifndef ARGPARSER_NO_EXCEPTIONS
-            throw ParseError("unrecognized argument: " + name);
+            std::string msg = "unrecognized argument: " + name;
+            std::string correction = suggest_correction(name);
+            if (!correction.empty())
+            {
+                msg += ". Did you mean " + correction + "?";
+            }
+            throw ParseError(msg);
 #endif // ARGPARSER_NO_EXCEPTIONS
         }
         return *arg;
@@ -1985,6 +2280,64 @@ namespace argparser
             return nullptr;
         }
         return &m_Arguments[it->second];
+    }
+
+    std::string ArgumentParser::suggest_correction(const std::string &name) const
+    {
+        std::string best_match;
+        size_t min_distance = std::numeric_limits<size_t>::max();
+
+        for (const auto &pair : m_OptionLookup)
+        {
+            size_t dist = levenshtein_distance(name, pair.first);
+            if (dist < min_distance && dist <= 2) // Threshold for suggestion
+            {
+                min_distance = dist;
+                best_match = pair.first;
+            }
+        }
+
+        return best_match;
+    }
+
+    size_t ArgumentParser::levenshtein_distance(const std::string &s1, const std::string &s2)
+    {
+        const size_t m = s1.size();
+        const size_t n = s2.size();
+
+        if (m == 0)
+            return n;
+        if (n == 0)
+            return m;
+
+        std::vector<size_t> costs(n + 1);
+        for (size_t k = 0; k <= n; k++)
+            costs[k] = k;
+
+        size_t i = 0;
+        for (char const &c1 : s1)
+        {
+            costs[0] = i + 1;
+            size_t corner = i;
+            size_t j = 0;
+            for (char const &c2 : s2)
+            {
+                size_t upper = costs[j + 1];
+                if (c1 == c2)
+                {
+                    costs[j + 1] = corner;
+                }
+                else
+                {
+                    size_t t = corner < upper ? corner : upper;
+                    costs[j + 1] = (t < costs[j] ? t : costs[j]) + 1;
+                }
+                corner = upper;
+                j++;
+            }
+            i++;
+        }
+        return costs[n];
     }
 
     void ArgumentParser::apply_action(Argument &arg, const std::vector<std::string> &values)
@@ -2111,7 +2464,13 @@ namespace argparser
                 return;
             }
 #ifndef ARGPARSER_NO_EXCEPTIONS
-            throw ParseError("unrecognized argument: " + name);
+            std::string msg = "unrecognized argument: " + name;
+            std::string correction = suggest_correction(name);
+            if (!correction.empty())
+            {
+                msg += ". Did you mean " + correction + "?";
+            }
+            throw ParseError(msg);
 #endif // ARGPARSER_NO_EXCEPTIONS
         }
         const auto values = collect_option_values(*arg, index, argc, argv, inline_value);
@@ -2132,7 +2491,13 @@ namespace argparser
                     return;
                 }
 #ifndef ARGPARSER_NO_EXCEPTIONS
-                throw ParseError("unrecognized argument: " + name);
+                std::string msg = "unrecognized argument: " + name;
+                std::string correction = suggest_correction(name);
+                if (!correction.empty())
+                {
+                    msg += ". Did you mean " + correction + "?";
+                }
+                throw ParseError(msg);
 #endif // ARGPARSER_NO_EXCEPTIONS
             }
 
@@ -2203,8 +2568,86 @@ namespace argparser
         }
     }
 
+    ArgumentParser &ArgumentParser::interactive(bool value)
+    {
+        m_InteractiveFallback = value;
+        return *this;
+    }
+
+    std::string ArgumentParser::generate_completion_script(const std::string &shell) const
+    {
+        if (shell == "bash")
+        {
+            std::ostringstream oss;
+            oss << "_" << m_Program << "_completion() {\n";
+            oss << "  local cur prev opts\n";
+            oss << "  COMPREPLY=()\n";
+            oss << "  cur=\"${COMP_WORDS[COMP_CWORD]}\"\n";
+            oss << "  prev=\"${COMP_WORDS[COMP_CWORD-1]}\"\n";
+            oss << "  opts=\"";
+            for (const auto &pair : m_OptionLookup)
+            {
+                oss << pair.first << " ";
+            }
+            for (const auto &pair : m_Subcommands)
+            {
+                oss << pair.first << " ";
+            }
+            oss << "\"\n\n";
+            oss << "  if [[ ${cur} == -* ]] || [[ ${COMP_CWORD} -eq 1 ]] ; then\n";
+            oss << "    COMPREPLY=( $(compgen -W \"${opts}\" -- ${cur}) )\n";
+            oss << "    return 0\n";
+            oss << "  fi\n";
+            oss << "}\n";
+            oss << "complete -F _" << m_Program << "_completion " << m_Program << "\n";
+            return oss.str();
+        }
+        return "Unsupported shell: " + shell;
+    }
+
     void ArgumentParser::finalize_and_validate()
     {
+        for (const auto &group : m_Groups)
+        {
+            std::vector<std::string> provided_names;
+            for (auto idx : group.m_ArgumentIndices)
+            {
+                if (m_Arguments[idx].m_Occurrences > 0)
+                {
+                    provided_names.push_back(m_Arguments[idx].m_Dest);
+                }
+            }
+
+            if (group.m_IsExclusive && provided_names.size() > 1)
+            {
+                std::string msg = "arguments are mutually exclusive: ";
+                for (size_t i = 0; i < provided_names.size(); ++i)
+                {
+                    if (i > 0)
+                        msg += ", ";
+                    msg += provided_names[i];
+                }
+#ifndef ARGPARSER_NO_EXCEPTIONS
+                throw ArgumentError(msg);
+#endif // ARGPARSER_NO_EXCEPTIONS
+            }
+
+            if (group.m_IsRequired && provided_names.empty())
+            {
+                if (m_InteractiveFallback)
+                {
+                    // Prompt for each in group? Or just first? Usually groups are exclusive.
+                    // For now, if required and empty, we just let the individual required check handle it if they are marked required.
+                }
+                else
+                {
+#ifndef ARGPARSER_NO_EXCEPTIONS
+                    throw RequiredError("at least one argument from group '" + group.m_Title + "' is required");
+#endif // ARGPARSER_NO_EXCEPTIONS
+                }
+            }
+        }
+
         for (auto &arg : m_Arguments)
         {
             if (arg.m_Values.empty())
@@ -2241,9 +2684,23 @@ namespace argparser
 
             if (arg.m_Required && arg.m_Values.empty() && arg.m_DefaultValues.empty())
             {
+                if (m_InteractiveFallback)
+                {
+                    std::cout << "Enter value for " << arg.m_Dest << " (" << arg.m_Help << "): ";
+                    std::string input;
+                    if (std::getline(std::cin, input) && !input.empty())
+                    {
+                        arg.m_Values = {input};
+                        arg.m_Occurrences = 1;
+                    }
+                }
+
+                if (arg.m_Values.empty())
+                {
 #ifndef ARGPARSER_NO_EXCEPTIONS
-                throw RequiredError("required argument missing: " + arg.m_Dest);
+                    throw RequiredError("required argument missing: " + arg.m_Dest);
 #endif // ARGPARSER_NO_EXCEPTIONS
+                }
             }
 
             if (!arg.m_Choices.empty())
@@ -2254,6 +2711,59 @@ namespace argparser
                     {
 #ifndef ARGPARSER_NO_EXCEPTIONS
                         throw ArgumentError("invalid choice for argument '" + arg.m_Dest + "': " + value);
+#endif // ARGPARSER_NO_EXCEPTIONS
+                    }
+                }
+            }
+
+            if (arg.m_Validator)
+            {
+                for (const auto &value : arg.m_Values)
+                {
+                    if (!arg.m_Validator(value))
+                    {
+#ifndef ARGPARSER_NO_EXCEPTIONS
+                        std::string msg = arg.m_ValidatorError.empty()
+                                              ? ("invalid value for argument '" + arg.m_Dest + "': " + value)
+                                              : arg.m_ValidatorError;
+                        throw ArgumentError(msg);
+#endif // ARGPARSER_NO_EXCEPTIONS
+                    }
+                }
+            }
+
+            if (arg.m_DependsOn.has_value())
+            {
+                const auto &dep_name = *arg.m_DependsOn;
+                bool dep_provided = false;
+
+                // Search in all arguments for the dependency
+                for (const auto &dep_arg : m_Arguments)
+                {
+                    if (dep_arg.m_Dest == dep_name && dep_arg.m_Occurrences > 0)
+                    {
+                        dep_provided = true;
+                        break;
+                    }
+                }
+
+                if (dep_provided && arg.m_Occurrences == 0)
+                {
+                    if (m_InteractiveFallback)
+                    {
+                        std::cout << "Argument '" << dep_name << "' requires '" << arg.m_Dest << "'. Enter value: ";
+                        std::string input;
+                        if (std::getline(std::cin, input) && !input.empty())
+                        {
+                            arg.m_Values = {input};
+                            arg.m_Occurrences = 1;
+                        }
+                    }
+
+                    if (arg.m_Occurrences == 0)
+                    {
+#ifndef ARGPARSER_NO_EXCEPTIONS
+                        throw RequiredIfError("argument '" + arg.m_Dest + "' is required when '" + dep_name + "' is present");
 #endif // ARGPARSER_NO_EXCEPTIONS
                     }
                 }
@@ -2582,6 +3092,19 @@ namespace argparser
         return *this;
     }
 
+    ArgumentParser::Argument &ArgumentParser::Argument::check(std::function<bool(const std::string &)> validator, const std::string &message)
+    {
+        m_Validator = validator;
+        m_ValidatorError = message;
+        return *this;
+    }
+
+    ArgumentParser::Argument &ArgumentParser::Argument::depends_on(const std::string &name)
+    {
+        m_DependsOn = name;
+        return *this;
+    }
+
     const std::string &ArgumentParser::Argument::dest() const
     {
         return m_Dest;
@@ -2638,7 +3161,19 @@ namespace argparser
         return m_NargsMax == std::numeric_limits<std::size_t>::max();
     }
 
-} // namespace argparser
+    //-----------------------------------------------------------------------------
+    // [Class] ArgumentGroup
+    //-----------------------------------------------------------------------------
+
+    template <typename... Names>
+    ArgumentParser::Argument &ArgumentParser::ArgumentGroup::add_argument(const Names &...names)
+    {
+        auto &arg = m_Parser->add_argument(names...);
+        m_ArgumentIndices.push_back(m_Parser->m_Arguments.size() - 1);
+        return arg;
+    }
+
+} // namespace argparse
 
 #endif // ARGPARSER_IMPLEMENTATION
 
