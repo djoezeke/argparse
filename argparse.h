@@ -10,7 +10,7 @@
  * Developed by Sackey Ezekiel Etrue and every direct or indirect contributors.
  * See LICENSE for copyright and licensing details (standard MIT License).
  *
- * ARGPARSER: What is `argparse` ?
+ * ARGPARSE: What is `argparse` ?
  *
  *      argparse is a modern C/C++ library for Commandline Argument Parsing.
  *
@@ -76,7 +76,7 @@
  *
  */
 
-#ifndef DJOEZEKE_ARGPARSER_HPP
+#ifndef DJOEZEKE_ARGPARSE_H
 
 /**
  * SECTIONS: Index of this file
@@ -86,7 +86,7 @@
  *
  */
 
-#define DJOEZEKE_ARGPARSER_HPP
+#define DJOEZEKE_ARGPARSE_H
 
 // clang-format off
 
@@ -94,13 +94,13 @@
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#ifndef ARGPARSER_SKIP_VERSION_CHECK
-    #if defined(ARGPARSER_VERSION_MAJOR) && defined(ARGPARSER_VERSION_MINOR) && defined(ARGPARSER_VERSION_PATCH)
-        #if ARGPARSER_VERSION_MAJOR != 1 || ARGPARSER_VERSION_MINOR != 0 || ARGPARSER_VERSION_PATCH != 0
+#ifndef ARGPARSE_SKIP_VERSION_CHECK
+    #if defined(ARGPARSE_VERSION_MAJOR) && defined(ARGPARSE_VERSION_MINOR) && defined(ARGPARSE_VERSION_PATCH)
+        #if ARGPARSE_VERSION_MAJOR != 1 || ARGPARSE_VERSION_MINOR != 0 || ARGPARSE_VERSION_PATCH != 0
             #warning "Already included a different version of the library!"
         #endif
     #endif
-#endif // ARGPARSER_SKIP_VERSION_CHECK
+#endif // ARGPARSE_SKIP_VERSION_CHECK
 
 /**
  * @defgroup version version Information
@@ -109,45 +109,45 @@
  */
 
 /**
- * @def ARGPARSER_VERSION_MAJOR
+ * @def ARGPARSE_VERSION_MAJOR
  * @brief Major version number of the library.
  * @note If this were version 1.2.3, this value would be 1.
  * @since This macro is available since 0.1.0 .
  */
-#ifndef ARGPARSER_VERSION_MAJOR
-    #define ARGPARSER_VERSION_MAJOR 0
-#endif // ARGPARSER_VERSION_MAJOR
+#ifndef ARGPARSE_VERSION_MAJOR
+    #define ARGPARSE_VERSION_MAJOR 0
+#endif // ARGPARSE_VERSION_MAJOR
 
 /**
- * @def ARGPARSER_VERSION_MINOR
+ * @def ARGPARSE_VERSION_MINOR
  * @brief Minor version number of the library.
  * @note If this were version 1.2.3, this value would be 2.
  * @since This macro is available since 0.1.0 .
  */
-#ifndef ARGPARSER_VERSION_MINOR
-    #define ARGPARSER_VERSION_MINOR 1
-#endif // ARGPARSER_VERSION_MINOR
+#ifndef ARGPARSE_VERSION_MINOR
+    #define ARGPARSE_VERSION_MINOR 1
+#endif // ARGPARSE_VERSION_MINOR
 
 /**
- * @def ARGPARSER_VERSION_PATCH
+ * @def ARGPARSE_VERSION_PATCH
  * @brief Patch version number of the library.
  * @note If this were version 1.2.3, this value would be 3.
  * @since This macro is available since 0.1.0 .
  */
-#ifndef ARGPARSER_VERSION_PATCH
-    #define ARGPARSER_VERSION_PATCH 0
-#endif // ARGPARSER_VERSION_PATCH
+#ifndef ARGPARSE_VERSION_PATCH
+    #define ARGPARSE_VERSION_PATCH 0
+#endif // ARGPARSE_VERSION_PATCH
 
 /**
- * @def ARGPARSER_VERSION
+ * @def ARGPARSE_VERSION
  * @brief Library version string in the format @c "X.Y.Z",
  * where @c X is the major version number, @c Y is a minor version
  * number, and @c Z is the patch version number.
  * @sa MyGetVersion
  */
-#ifndef ARGPARSER_VERSION
-    #define ARGPARSER_VERSION "0.1.0"
-#endif // ARGPARSER_VERSION
+#ifndef ARGPARSE_VERSION
+    #define ARGPARSE_VERSION "0.1.0"
+#endif // ARGPARSE_VERSION
 
 /** @} */
 
@@ -218,7 +218,7 @@ namespace argparse
         }
     };
 
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
 
     /**
      * @class ArgumentError
@@ -311,7 +311,7 @@ namespace argparse
             : ArgumentError("help requested") {};
     };
 
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
 
     /**
      * @class HelpFormatter
@@ -1893,9 +1893,9 @@ namespace argparse
         std::vector<std::string> values{names...};
         if (values.empty())
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("add_argument requires at least one name");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
 
         Argument arg;
@@ -1909,9 +1909,9 @@ namespace argparse
             {
                 if (name.empty() || name[0] != '-')
                 {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                     throw ArgumentError("optional arguments must start with '-': " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                 }
             }
 
@@ -1933,9 +1933,9 @@ namespace argparse
             {
                 if (m_OptionLookup.find(name) != m_OptionLookup.end())
                 {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                     throw ArgumentError("duplicate option: " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                 }
             }
         }
@@ -1943,9 +1943,9 @@ namespace argparse
         {
             if (values.size() != 1)
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw ArgumentError("positional arguments only accept one name");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
             arg.m_Kind = Argument::Kind::Positional;
             arg.m_Dest = values.front();
@@ -1974,9 +1974,9 @@ namespace argparse
     {
         if (name.empty() || name[0] == '-')
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("subcommand must be a non-empty token not starting with '-': " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
 
         auto it = m_Subcommands.find(name);
@@ -2259,7 +2259,7 @@ namespace argparse
         auto *arg = try_lookup_option(name);
         if (arg == nullptr)
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             std::string msg = "unrecognized argument: " + name;
             std::string correction = suggest_correction(name);
             if (!correction.empty())
@@ -2267,7 +2267,7 @@ namespace argparse
                 msg += ". Did you mean " + correction + "?";
             }
             throw ParseError(msg);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return *arg;
     }
@@ -2347,9 +2347,9 @@ namespace argparse
         switch (arg.m_Action)
         {
         case Argument::ActionType::Help:
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw HelpError();
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         case Argument::ActionType::StoreTrue:
             arg.m_Values = {"true"};
             return;
@@ -2393,9 +2393,9 @@ namespace argparse
         {
             if (index + 1 >= argc)
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw RequiredError("argument requires a value: " + arg.m_Dest);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
             ++index;
             values.emplace_back(argv[index]);
@@ -2434,9 +2434,9 @@ namespace argparse
 
         if (values.size() < arg.m_NargsMin)
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw RequiredError("argument requires more values: " + arg.m_Dest);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
 
         if (!arg.is_unbounded() && values.size() > arg.m_NargsMax)
@@ -2463,7 +2463,7 @@ namespace argparse
                 m_UnknownArgs.push_back(token);
                 return;
             }
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             std::string msg = "unrecognized argument: " + name;
             std::string correction = suggest_correction(name);
             if (!correction.empty())
@@ -2471,7 +2471,7 @@ namespace argparse
                 msg += ". Did you mean " + correction + "?";
             }
             throw ParseError(msg);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         const auto values = collect_option_values(*arg, index, argc, argv, inline_value);
         apply_action(*arg, values);
@@ -2490,7 +2490,7 @@ namespace argparse
                     m_UnknownArgs.push_back(token.substr(pos - 1));
                     return;
                 }
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 std::string msg = "unrecognized argument: " + name;
                 std::string correction = suggest_correction(name);
                 if (!correction.empty())
@@ -2498,7 +2498,7 @@ namespace argparse
                     msg += ". Did you mean " + correction + "?";
                 }
                 throw ParseError(msg);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
 
             std::optional<std::string> inline_value;
@@ -2534,9 +2534,9 @@ namespace argparse
 
             if (remaining < remaining_minimum + arg.m_NargsMin)
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw RequiredError("missing positional argument: " + arg.m_Dest);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
 
             std::size_t max_take = remaining - remaining_minimum;
@@ -2548,9 +2548,9 @@ namespace argparse
             std::size_t take = max_take;
             if (take < arg.m_NargsMin)
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw RequiredError("missing positional argument: " + arg.m_Dest);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
 
             for (std::size_t n = 0; n < take; ++n)
@@ -2562,9 +2562,9 @@ namespace argparse
 
         if (cursor < tokens.size())
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("unrecognized positional argument: " + tokens[cursor]);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
     }
 
@@ -2627,9 +2627,9 @@ namespace argparse
                         msg += ", ";
                     msg += provided_names[i];
                 }
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw ArgumentError(msg);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
 
             if (group.m_IsRequired && provided_names.empty())
@@ -2641,9 +2641,9 @@ namespace argparse
                 }
                 else
                 {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                     throw RequiredError("at least one argument from group '" + group.m_Title + "' is required");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                 }
             }
         }
@@ -2697,9 +2697,9 @@ namespace argparse
 
                 if (arg.m_Values.empty())
                 {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                     throw RequiredError("required argument missing: " + arg.m_Dest);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                 }
             }
 
@@ -2709,9 +2709,9 @@ namespace argparse
                 {
                     if (std::find(arg.m_Choices.begin(), arg.m_Choices.end(), value) == arg.m_Choices.end())
                     {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                         throw ArgumentError("invalid choice for argument '" + arg.m_Dest + "': " + value);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                     }
                 }
             }
@@ -2722,12 +2722,12 @@ namespace argparse
                 {
                     if (!arg.m_Validator(value))
                     {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                         std::string msg = arg.m_ValidatorError.empty()
                                               ? ("invalid value for argument '" + arg.m_Dest + "': " + value)
                                               : arg.m_ValidatorError;
                         throw ArgumentError(msg);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                     }
                 }
             }
@@ -2762,9 +2762,9 @@ namespace argparse
 
                     if (arg.m_Occurrences == 0)
                     {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                         throw RequiredIfError("argument '" + arg.m_Dest + "' is required when '" + dep_name + "' is present");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
                     }
                 }
             }
@@ -2840,9 +2840,9 @@ namespace argparse
         if (it == m_Data.end())
         {
 
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ParseError("unknown argument: " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return it->second;
     }
@@ -2861,9 +2861,9 @@ namespace argparse
     {
         if (!m_SubcommandNamespace)
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ParseError("subcommand namespace not available");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return *m_SubcommandNamespace;
     }
@@ -2874,9 +2874,9 @@ namespace argparse
         const auto &vals = raw_values(name);
         if (vals.empty())
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("argument has no value: " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return convert<T>(vals.front());
     }
@@ -2915,9 +2915,9 @@ namespace argparse
             {
                 return false;
             }
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("cannot convert value to bool: " + value);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         else if constexpr (std::is_integral<T>::value)
         {
@@ -2926,9 +2926,9 @@ namespace argparse
             iss >> parsed;
             if (iss.fail() || !iss.eof())
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw ArgumentError("cannot convert value to integer: " + value);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
             return parsed;
         }
@@ -2939,9 +2939,9 @@ namespace argparse
             iss >> parsed;
             if (iss.fail() || !iss.eof())
             {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
                 throw ArgumentError("cannot convert value to number: " + value);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
             }
             return parsed;
         }
@@ -3020,9 +3020,9 @@ namespace argparse
         }
         else
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ArgumentError("unknown action: " + name);
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return *this;
     }
@@ -3053,9 +3053,9 @@ namespace argparse
         }
         else
         {
-#ifndef ARGPARSER_NO_EXCEPTIONS
+#ifndef ARGPARSE_NO_EXCEPTIONS
             throw ParseError("unknown nargs pattern");
-#endif // ARGPARSER_NO_EXCEPTIONS
+#endif // ARGPARSE_NO_EXCEPTIONS
         }
         return *this;
     }
@@ -3175,7 +3175,7 @@ namespace argparse
 
 } // namespace argparse
 
-#endif // ARGPARSER_IMPLEMENTATION
+#endif // ARGPARSE_IMPLEMENTATION
 
 #pragma endregion // Argparser
 
