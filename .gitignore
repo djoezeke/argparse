@@ -56,5 +56,6 @@ dkms.conf
 
 # Argparser Artifact
 build/
+build-*/
 .vscode/
 .argparser/
