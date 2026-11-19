@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(Argparser
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "Modern single-file C++ command line argument parser"
     HOMEPAGE_URL "https://github.com/djoezeke/argparse"
     LANGUAGES CXX)
@@ -25,12 +25,14 @@ set_target_properties(argparse PROPERTIES EXPORT_NAME Argparser)
 
 target_compile_features(argparse INTERFACE cxx_std_17)
 target_include_directories(argparse INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-# The library is a single header located at the repository root. Keep the
-# source-tree include path stable for examples, tests, and downstream users.
-set(ARGPARSER_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/argparse.h")
+# The canonical header is include/argparse/argparse.h. include/argparse.h is a
+# forwarding header so both `#include "argparse.h"` and
+# `#include "argparse/argparse.h"` work.
+set(ARGPARSER_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/argparse/argparse.h")
+set(ARGPARSER_FORWARDING_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/argparse.h")
 
 if(ARGPARSER_BUILD_TESTS)
     enable_testing()
@@ -45,6 +47,8 @@ if(ARGPARSER_ENABLE_INSTALL)
     install(TARGETS argparse EXPORT ArgparserTargets)
 
     install(FILES "${ARGPARSER_HEADER}"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/argparse")
+    install(FILES "${ARGPARSER_FORWARDING_HEADER}"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
     install(EXPORT ArgparserTargets

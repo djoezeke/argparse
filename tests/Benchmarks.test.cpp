@@ -367,6 +367,97 @@ TEST_CASE("benchmark: namespace conversions", "[!benchmark][benchmark][namespace
     };
 }
 
+TEST_CASE("benchmark: adversarial scaling", "[!benchmark][benchmark][scale]")
+{
+    SECTION("construct parser with 1,000 options")
+    {
+        BENCHMARK("construct parser with 1,000 options")
+        {
+            ArgumentParser parser("bench", "Large parser");
+            for (std::size_t index = 0; index < 1000; ++index)
+            {
+                parser.add_argument("--option-" + std::to_string(index))
+                    .help("Generated option number " + std::to_string(index))
+                    .default_value(static_cast<int>(index));
+            }
+            return parser.format_usage().size();
+        };
+    }
+
+    SECTION("parse 10,000 positional tokens")
+    {
+        ArgumentParser parser("bench");
+        parser.add_argument("files").nargs('*');
+
+        std::vector<std::string> args = make_args({});
+        args.reserve(10001);
+        for (int index = 0; index < 10000; ++index)
+        {
+            args.push_back("file-" + std::to_string(index));
+        }
+        Argv argv(std::move(args));
+
+        BENCHMARK("parse 10,000 positional tokens")
+        {
+            const auto &ns = parser.parse_args(argv.argc(), argv.argv());
+            return ns.raw_values("files").size();
+        };
+    }
+
+    SECTION("dispatch through 20 nested subcommands")
+    {
+        ArgumentParser parser("deep");
+        ArgumentParser *current = &parser;
+        std::vector<std::string> args = make_args({});
+        for (int level = 0; level < 20; ++level)
+        {
+            const std::string name = "level-" + std::to_string(level);
+            current = &current->add_subcommand(name);
+            args.push_back(name);
+        }
+        current->add_argument("value");
+        args.push_back("end");
+        Argv argv(std::move(args));
+
+        BENCHMARK("dispatch through 20 nested subcommands")
+        {
+            const auto &ns = parser.parse_args(argv.argc(), argv.argv());
+            const ArgumentParser::Namespace *current_namespace = &ns;
+            for (int level = 0; level < 20; ++level)
+            {
+                current_namespace = &current_namespace->subcommand_namespace();
+            }
+            return current_namespace->get<std::string>("value").size();
+        };
+    }
+
+    SECTION("parse a 100,000-character option value")
+    {
+        ArgumentParser parser("bench");
+        parser.add_argument("--value");
+        const std::string long_value(100000, 'x');
+        Argv argv({"--value", long_value});
+
+        BENCHMARK("parse a 100,000-character option value")
+        {
+            const auto &ns = parser.parse_args(argv.argc(), argv.argv());
+            return ns.raw_values("value").front().size();
+        };
+    }
+
+    SECTION("repeated failed option lookups")
+    {
+        ArgumentParser parser = make_parser_with_options(100);
+        Argv argv({"--option-999"});
+
+        BENCHMARK("failed option lookup with suggestions")
+        {
+            auto result = parser.try_parse_args(argv.argc(), argv.argv());
+            return result.code == argparse::ErrorCode::UnknownOption;
+        };
+    }
+}
+
 TEST_CASE("benchmark: help generation", "[!benchmark][benchmark][help]")
 {
     ArgumentParser parser = make_parser_with_options(20);
